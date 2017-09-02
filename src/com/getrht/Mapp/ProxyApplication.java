@@ -4,7 +4,7 @@
  *
  * 2014-6-15
  */
-package com.example.dexunshell;
+package com.getrht.Mapp;
 
 import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
@@ -27,7 +27,9 @@ import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
+import android.os.Build;
 import android.os.Bundle;
+import android.util.ArrayMap;
 import android.util.Log;
 import dalvik.system.DexClassLoader;
 
@@ -51,22 +53,27 @@ public class ProxyApplication extends Application {
 			File dexFile = new File(apkFileName);
 			if (!dexFile.exists())
 				dexFile.createNewFile();
-			// ¶ÁÈ¡³ÌÐòclasses.dexÎÄ¼þ
 			byte[] dexdata = this.readDexFileFromApk();
 			Log.i("info", "classes.dex's byte.length=" + dexdata.length);
-			// ·ÖÀë³ö½â¿ÇºóµÄapkÎÄ¼þÒÔÓÃÓÚ¶¯Ì¬¼ÓÔØ
 			this.splitPayLoadFromDex(dexdata);
-			// ÅäÖÃ¶¯Ì¬¼ÓÔØ»·¾³
-			Object currentActivityThread = RefInvoke.invokeStaticMethod("android.app.ActivityThread", "currentActivityThread", new Class[] {}, new Object[] {});
+			Object currentActivityThread = RefInvoke.invokeStaticMethod("android.app.ActivityThread", "currentActivityThread", new Class[] {},
+					new Object[] {});
 			String packageName = this.getPackageName();
-			HashMap mPackages = (HashMap) RefInvoke.getFieldOjbect("android.app.ActivityThread", currentActivityThread, "mPackages");
-			WeakReference wr = (WeakReference) mPackages.get(packageName);
-			DexClassLoader dLoader = new DexClassLoader(apkFileName, odexPath, libPath, (ClassLoader) RefInvoke.getFieldOjbect("android.app.LoadedApk",
-					wr.get(), "mClassLoader"));
-			RefInvoke.setFieldOjbect("android.app.LoadedApk", "mClassLoader", wr.get(), dLoader);
+			WeakReference wr = null;
+			if (Build.VERSION.SDK_INT >= 19) {
+				ArrayMap mPackages = (ArrayMap) RefInvoke.getFieldOjbect("android.app.ActivityThread", currentActivityThread, "mPackages");
+				wr = (WeakReference) mPackages.get(packageName);
 
+			} else {
+				HashMap mPackages = (HashMap) RefInvoke.getFieldOjbect("android.app.ActivityThread", currentActivityThread, "mPackages");
+				wr = (WeakReference) mPackages.get(packageName);
+			}
+			if (wr != null) {
+				DexClassLoader dLoader = new DexClassLoader(apkFileName, odexPath, libPath, (ClassLoader) RefInvoke.getFieldOjbect(
+						"android.app.LoadedApk", wr.get(), "mClassLoader"));
+				RefInvoke.setFieldOjbect("android.app.LoadedApk", "mClassLoader", wr.get(), dLoader);
+			}
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
@@ -74,7 +81,7 @@ public class ProxyApplication extends Application {
 	public void onCreate() {
 		{
 			Log.i("info", "ProxyApplilcation oncreate()");
-			// Èç¹ûÔ´Ó¦ÓÃÅäÖÃÓÐAppliction¶ÔÏó£¬ÔòÌæ»»ÎªÔ´Ó¦ÓÃApplicaiton£¬ÒÔ±ã²»Ó°ÏìÔ´³ÌÐòÂß¼­¡£
+			// ï¿½ï¿½ï¿½Ô´Ó¦ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Applictionï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½æ»»ÎªÔ´Ó¦ï¿½ï¿½Applicaitonï¿½ï¿½ï¿½Ô±ã²»Ó°ï¿½ï¿½Ô´ï¿½ï¿½ï¿½ï¿½ï¿½ß¼ï¿½ï¿½ï¿½
 			String appClassName = null;
 			try {
 				ApplicationInfo ai = this.getPackageManager().getApplicationInfo(this.getPackageName(), PackageManager.GET_META_DATA);
@@ -88,28 +95,31 @@ public class ProxyApplication extends Application {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-			Object currentActivityThread = RefInvoke.invokeStaticMethod("android.app.ActivityThread", "currentActivityThread", new Class[] {}, new Object[] {});
+			Object currentActivityThread = RefInvoke.invokeStaticMethod("android.app.ActivityThread", "currentActivityThread", new Class[] {},
+					new Object[] {});
 			Object mBoundApplication = RefInvoke.getFieldOjbect("android.app.ActivityThread", currentActivityThread, "mBoundApplication");
 			Object loadedApkInfo = RefInvoke.getFieldOjbect("android.app.ActivityThread$AppBindData", mBoundApplication, "info");
 			RefInvoke.setFieldOjbect("android.app.LoadedApk", "mApplication", loadedApkInfo, null);
 			Object oldApplication = RefInvoke.getFieldOjbect("android.app.ActivityThread", currentActivityThread, "mInitialApplication");
-			ArrayList<Application> mAllApplications = (ArrayList<Application>) RefInvoke.getFieldOjbect("android.app.ActivityThread", currentActivityThread,
-					"mAllApplications");
+			ArrayList<Application> mAllApplications = (ArrayList<Application>) RefInvoke.getFieldOjbect("android.app.ActivityThread",
+					currentActivityThread, "mAllApplications");
 			mAllApplications.remove(oldApplication);
-			ApplicationInfo appinfo_In_LoadedApk = (ApplicationInfo) RefInvoke.getFieldOjbect("android.app.LoadedApk", loadedApkInfo, "mApplicationInfo");
-			ApplicationInfo appinfo_In_AppBindData = (ApplicationInfo) RefInvoke.getFieldOjbect("android.app.ActivityThread$AppBindData", mBoundApplication,
-					"appInfo");
+			ApplicationInfo appinfo_In_LoadedApk = (ApplicationInfo) RefInvoke.getFieldOjbect("android.app.LoadedApk", loadedApkInfo,
+					"mApplicationInfo");
+			ApplicationInfo appinfo_In_AppBindData = (ApplicationInfo) RefInvoke.getFieldOjbect("android.app.ActivityThread$AppBindData",
+					mBoundApplication, "appInfo");
 			appinfo_In_LoadedApk.className = appClassName;
 			appinfo_In_AppBindData.className = appClassName;
-			Application app = (Application) RefInvoke.invokeMethod("android.app.LoadedApk", "makeApplication", loadedApkInfo, new Class[] { boolean.class,
-					Instrumentation.class }, new Object[] { false, null });
+			Application app = (Application) RefInvoke.invokeMethod("android.app.LoadedApk", "makeApplication", loadedApkInfo, new Class[] {
+					boolean.class, Instrumentation.class }, new Object[] { false, null });
 			RefInvoke.setFieldOjbect("android.app.ActivityThread", "mInitialApplication", currentActivityThread, app);
-			//Exception ArrayMap can't cast to HashMap
+			// Exception ArrayMap can't cast to HashMap
 			HashMap mProviderMap = (HashMap) RefInvoke.getFieldOjbect("android.app.ActivityThread", currentActivityThread, "mProviderMap");
 			Iterator it = mProviderMap.values().iterator();
 			while (it.hasNext()) {
 				Object providerClientRecord = it.next();
-				Object localProvider = RefInvoke.getFieldOjbect("android.app.ActivityThread$ProviderClientRecord", providerClientRecord, "mLocalProvider");
+				Object localProvider = RefInvoke.getFieldOjbect("android.app.ActivityThread$ProviderClientRecord", providerClientRecord,
+						"mLocalProvider");
 				RefInvoke.setFieldOjbect("android.content.ContentProvider", "mContext", localProvider, app);
 			}
 			app.onCreate();
@@ -191,7 +201,7 @@ public class ProxyApplication extends Application {
 		return dexByteArrayOutputStream.toByteArray();
 	}
 
-	// //Ö±½Ó·µ»ØÊý¾Ý£¬¶ÁÕß¿ÉÒÔÌí¼Ó×Ô¼º½âÃÜ·½·¨
+	// //Ö±ï¿½Ó·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý£ï¿½ï¿½ï¿½ï¿½ß¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô¼ï¿½ï¿½ï¿½ï¿½Ü·ï¿½ï¿½ï¿½
 	private byte[] decrypt(byte[] data) {
 		return data;
 	}

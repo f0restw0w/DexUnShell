@@ -1,4 +1,6 @@
-package com.example.dexunshell;
+package com.getrht.Mapp;
+
+import com.example.dexunshell.R;
 
 import android.os.Bundle;
 import android.app.Activity;
